@@ -9,13 +9,14 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(100) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
   phone VARCHAR(20) NOT NULL,
+  role VARCHAR(20) DEFAULT 'user',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Tables table
 CREATE TABLE IF NOT EXISTS tables (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  table_number VARCHAR(10) NOT NULL,
+  table_number VARCHAR(10) NOT NULL UNIQUE,
   capacity INT NOT NULL,
   location VARCHAR(50),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -45,6 +46,17 @@ CREATE TABLE IF NOT EXISTS reservations (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE CASCADE
+);
+
+-- Contact Requests table
+CREATE TABLE IF NOT EXISTS contact_requests (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100),
+  phone VARCHAR(20) NOT NULL,
+  message TEXT,
+  status VARCHAR(20) DEFAULT 'new',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Insert sample tables
