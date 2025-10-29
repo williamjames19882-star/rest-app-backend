@@ -1,33 +1,16 @@
-const pool = require('../config/db');
+const ReservationRepository = require('../repositories/ReservationRepository');
 
 class Reservation {
   static async create(reservationData) {
-    const { user_id, table_id, date, time, number_of_guests, special_requests } = reservationData;
-    const [result] = await pool.execute(
-      'INSERT INTO reservations (user_id, table_id, date, time, number_of_guests, special_requests, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [user_id, table_id, date, time, number_of_guests, special_requests, 'confirmed']
-    );
-    return result.insertId;
+    return await ReservationRepository.create(reservationData);
   }
 
   static async getByUserId(userId) {
-    const [rows] = await pool.execute(
-      'SELECT r.*, t.table_number, t.capacity FROM reservations r JOIN tables t ON r.table_id = t.id WHERE r.user_id = ? ORDER BY r.date DESC, r.time DESC',
-      [userId]
-    );
-    return rows;
+    return await ReservationRepository.getByUserId(userId);
   }
 
   static async getAvailableTables(date, time) {
-    const [rows] = await pool.execute(
-      `SELECT t.* FROM tables t 
-       WHERE t.id NOT IN (
-         SELECT r.table_id FROM reservations r 
-         WHERE r.date = ? AND r.time = ? AND r.status = 'confirmed'
-       )`
-      , [date, time]
-    );
-    return rows;
+    return await ReservationRepository.getAvailableTables(date, time);
   }
 }
 

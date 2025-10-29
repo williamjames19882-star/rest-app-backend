@@ -1,36 +1,20 @@
-const pool = require('../config/db');
+const MenuRepository = require('../repositories/MenuRepository');
 
 class Menu {
   static async getAll() {
-    const [rows] = await pool.execute(
-      'SELECT * FROM menu_items ORDER BY category, name'
-    );
-    return rows;
+    return await MenuRepository.getAll();
   }
 
   static async getByCategory(category) {
-    const [rows] = await pool.execute(
-      'SELECT * FROM menu_items WHERE category = ? ORDER BY name',
-      [category]
-    );
-    return rows;
+    return await MenuRepository.getByCategory(category);
   }
 
   static async getById(id) {
-    const [rows] = await pool.execute(
-      'SELECT * FROM menu_items WHERE id = ?',
-      [id]
-    );
-    return rows[0];
+    return await MenuRepository.getById(id);
   }
 
   static async create(itemData) {
-    const { name, description, price, category, image_url } = itemData;
-    const [result] = await pool.execute(
-      'INSERT INTO menu_items (name, description, price, category, image_url) VALUES (?, ?, ?, ?, ?)',
-      [name, description, price, category, image_url]
-    );
-    return result.insertId;
+    return await MenuRepository.create(itemData);
   }
 }
 

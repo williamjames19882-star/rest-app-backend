@@ -18,6 +18,6 @@ VALUES (
 -- This is a hashed version of "admin123" - change the password!
 UPDATE users 
 SET role = 'admin', 
-    password = '$2a$10$K8Z8Q0x5xNZ0xNZ0xNZ0x.YQZx.YQZx.YQZx.YQZx.YQZx.YQZxYQZx'
+    password = '$2a$10$XvZy/fcNca2gA3cgaybGoO7J6IStXymzVLy3CexRZm/5iUkj7JANG '
 WHERE email = 'admin@restaurant.com';
 

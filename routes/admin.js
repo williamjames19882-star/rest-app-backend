@@ -1,7 +1,6 @@
 const express = require('express');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
-const User = require('../models/User');
-const pool = require('../config/db');
+const Admin = require('../models/Admin');
 const { upload, uploadToCloudinary } = require('../utils/uploadHelper');
 
 const router = express.Router();
@@ -13,22 +12,8 @@ router.use(authenticateToken, requireAdmin);
 router.get('/users', async (req, res) => {
   try {
     const { search } = req.query;
-    
-    if (search) {
-      // Search users by name or email
-      const [users] = await pool.execute(
-        `SELECT id, name, email, phone, role, created_at 
-         FROM users 
-         WHERE name LIKE ? OR email LIKE ? 
-         ORDER BY created_at DESC`,
-        [`%${search}%`, `%${search}%`]
-      );
-      res.json(users);
-    } else {
-      // Get all users
-      const users = await User.findAll();
-      res.json(users);
-    }
+    const users = await Admin.getAllUsers(search);
+    res.json(users);
   } catch (error) {
     console.error('Get all users error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -38,13 +23,7 @@ router.get('/users', async (req, res) => {
 // Get all reservations (admin only)
 router.get('/reservations', async (req, res) => {
   try {
-    const [reservations] = await pool.execute(
-      `SELECT r.*, u.name as user_name, u.email, u.phone, t.table_number, t.capacity, t.location 
-       FROM reservations r 
-       JOIN users u ON r.user_id = u.id 
-       JOIN tables t ON r.table_id = t.id 
-       ORDER BY r.date DESC, r.time DESC`
-    );
+    const reservations = await Admin.getAllReservations();
     res.json(reservations);
   } catch (error) {
     console.error('Get all reservations error:', error);
@@ -74,20 +53,17 @@ router.post('/menu/items', upload.single('image'), async (req, res) => {
       }
     }
 
-    const [result] = await pool.execute(
-      'INSERT INTO menu_items (name, description, price, category, image_url) VALUES (?, ?, ?, ?, ?)',
-      [name, description, price, category, image_url]
-    );
-
-    // Fetch created item
-    const [item] = await pool.execute(
-      'SELECT * FROM menu_items WHERE id = ?',
-      [result.insertId]
-    );
+    const item = await Admin.createMenuItem({
+      name,
+      description,
+      price,
+      category,
+      image_url
+    });
 
     res.status(201).json({ 
-      id: result.insertId, 
-      item: item[0],
+      id: item.id, 
+      item,
       message: 'Menu item created successfully' 
     });
   } catch (error) {
@@ -103,16 +79,16 @@ router.put('/menu/items/:id', upload.single('image'), async (req, res) => {
     const { name, description, price, category, image_url: body_image_url } = req.body;
 
     // Fetch current item to get existing image_url
-    const [currentItem] = await pool.execute(
-      'SELECT image_url FROM menu_items WHERE id = ?',
-      [id]
-    );
+    const currentImageUrl = await Admin.getMenuItemImageUrl(id);
 
-    if (currentItem.length === 0) {
-      return res.status(404).json({ error: 'Menu item not found' });
+    if (!currentImageUrl && !body_image_url) {
+      const existingItem = await Admin.getMenuItemById(id);
+      if (!existingItem) {
+        return res.status(404).json({ error: 'Menu item not found' });
+      }
     }
 
-    let image_url = currentItem[0].image_url; // Default to current image
+    let image_url = currentImageUrl || null; // Default to current image
 
     // If new image file is uploaded, upload to Cloudinary
     if (req.file) {
@@ -128,18 +104,19 @@ router.put('/menu/items/:id', upload.single('image'), async (req, res) => {
       image_url = body_image_url;
     }
 
-    const [result] = await pool.execute(
-      'UPDATE menu_items SET name = ?, description = ?, price = ?, category = ?, image_url = ? WHERE id = ?',
-      [name, description, price, category, image_url, id]
-    );
+    const item = await Admin.updateMenuItem(id, {
+      name,
+      description,
+      price,
+      category,
+      image_url
+    });
 
-    // Fetch updated item
-    const [item] = await pool.execute(
-      'SELECT * FROM menu_items WHERE id = ?',
-      [id]
-    );
+    if (!item) {
+      return res.status(404).json({ error: 'Menu item not found' });
+    }
 
-    res.json({ item: item[0], message: 'Menu item updated successfully' });
+    res.json({ item, message: 'Menu item updated successfully' });
   } catch (error) {
     console.error('Update menu item error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -151,12 +128,9 @@ router.delete('/menu/items/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [result] = await pool.execute(
-      'DELETE FROM menu_items WHERE id = ?',
-      [id]
-    );
+    const affectedRows = await Admin.deleteMenuItem(id);
 
-    if (result.affectedRows === 0) {
+    if (affectedRows === 0) {
       return res.status(404).json({ error: 'Menu item not found' });
     }
 
@@ -177,12 +151,9 @@ router.put('/reservations/:id/status', async (req, res) => {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
-    const [result] = await pool.execute(
-      'UPDATE reservations SET status = ? WHERE id = ?',
-      [status, id]
-    );
+    const affectedRows = await Admin.updateReservationStatus(id, status);
 
-    if (result.affectedRows === 0) {
+    if (affectedRows === 0) {
       return res.status(404).json({ error: 'Reservation not found' });
     }
 
@@ -196,15 +167,8 @@ router.put('/reservations/:id/status', async (req, res) => {
 // Get statistics
 router.get('/stats', async (req, res) => {
   try {
-    const [userCount] = await pool.execute('SELECT COUNT(*) as count FROM users');
-    const [reservationCount] = await pool.execute('SELECT COUNT(*) as count FROM reservations');
-    const [menuItemCount] = await pool.execute('SELECT COUNT(*) as count FROM menu_items');
-
-    res.json({
-      users: userCount[0].count,
-      reservations: reservationCount[0].count,
-      menuItems: menuItemCount[0].count,
-    });
+    const stats = await Admin.getDashboardStats();
+    res.json(stats);
   } catch (error) {
     console.error('Get stats error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -214,9 +178,7 @@ router.get('/stats', async (req, res) => {
 // Get all tables
 router.get('/tables', async (req, res) => {
   try {
-    const [tables] = await pool.execute(
-      'SELECT * FROM tables ORDER BY table_number ASC'
-    );
+    const tables = await Admin.getAllTables();
     res.json(tables);
   } catch (error) {
     console.error('Get all tables error:', error);
@@ -233,17 +195,13 @@ router.post('/tables', async (req, res) => {
       return res.status(400).json({ error: 'Table number and capacity are required' });
     }
 
-    const [result] = await pool.execute(
-      'INSERT INTO tables (table_number, capacity, location) VALUES (?, ?, ?)',
-      [table_number, capacity, location || '']
-    );
+    const table = await Admin.createTable({
+      table_number,
+      capacity,
+      location
+    });
 
-    const [table] = await pool.execute(
-      'SELECT * FROM tables WHERE id = ?',
-      [result.insertId]
-    );
-
-    res.status(201).json({ table: table[0], message: 'Table created successfully' });
+    res.status(201).json({ table, message: 'Table created successfully' });
   } catch (error) {
     console.error('Create table error:', error);
     if (error.code === 'ER_DUP_ENTRY') {
@@ -264,21 +222,17 @@ router.put('/tables/:id', async (req, res) => {
       return res.status(400).json({ error: 'Table number and capacity are required' });
     }
 
-    const [result] = await pool.execute(
-      'UPDATE tables SET table_number = ?, capacity = ?, location = ? WHERE id = ?',
-      [table_number, capacity, location || '', id]
-    );
+    const table = await Admin.updateTable(id, {
+      table_number,
+      capacity,
+      location
+    });
 
-    if (result.affectedRows === 0) {
+    if (!table) {
       return res.status(404).json({ error: 'Table not found' });
     }
 
-    const [table] = await pool.execute(
-      'SELECT * FROM tables WHERE id = ?',
-      [id]
-    );
-
-    res.json({ table: table[0], message: 'Table updated successfully' });
+    res.json({ table, message: 'Table updated successfully' });
   } catch (error) {
     console.error('Update table error:', error);
     if (error.code === 'ER_DUP_ENTRY') {
@@ -295,21 +249,15 @@ router.delete('/tables/:id', async (req, res) => {
     const { id } = req.params;
 
     // Check if table has reservations
-    const [reservations] = await pool.execute(
-      'SELECT COUNT(*) as count FROM reservations WHERE table_id = ?',
-      [id]
-    );
+    const hasReservations = await Admin.checkTableHasReservations(id);
 
-    if (reservations[0].count > 0) {
+    if (hasReservations) {
       return res.status(400).json({ error: 'Cannot delete table with existing reservations' });
     }
 
-    const [result] = await pool.execute(
-      'DELETE FROM tables WHERE id = ?',
-      [id]
-    );
+    const affectedRows = await Admin.deleteTable(id);
 
-    if (result.affectedRows === 0) {
+    if (affectedRows === 0) {
       return res.status(404).json({ error: 'Table not found' });
     }
 
@@ -323,9 +271,7 @@ router.delete('/tables/:id', async (req, res) => {
 // Get all contact requests
 router.get('/contact-requests', async (req, res) => {
   try {
-    const [requests] = await pool.execute(
-      'SELECT * FROM contact_requests ORDER BY created_at DESC'
-    );
+    const requests = await Admin.getAllContactRequests();
     res.json(requests);
   } catch (error) {
     console.error('Get all contact requests error:', error);
@@ -343,12 +289,9 @@ router.put('/contact-requests/:id/status', async (req, res) => {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
-    const [result] = await pool.execute(
-      'UPDATE contact_requests SET status = ? WHERE id = ?',
-      [status, id]
-    );
+    const affectedRows = await Admin.updateContactRequestStatus(id, status);
 
-    if (result.affectedRows === 0) {
+    if (affectedRows === 0) {
       return res.status(404).json({ error: 'Contact request not found' });
     }
 

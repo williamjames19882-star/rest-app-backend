@@ -1,6 +1,6 @@
 const express = require('express');
 const Reservation = require('../models/Reservation');
-const pool = require('../config/db');
+const Admin = require('../models/Admin');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
@@ -33,16 +33,11 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     // Check if table exists and get capacity
-    const [tables] = await pool.execute(
-      'SELECT * FROM tables WHERE id = ?',
-      [table_id]
-    );
+    const table = await Admin.getTableById(table_id);
 
-    if (tables.length === 0) {
+    if (!table) {
       return res.status(404).json({ error: 'Table not found' });
     }
-
-    const table = tables[0];
 
     if (parseInt(number_of_guests) > table.capacity) {
       return res.status(400).json({ error: 'Number of guests exceeds table capacity' });

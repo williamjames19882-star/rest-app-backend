@@ -1,5 +1,5 @@
 const express = require('express');
-const pool = require('../config/db');
+const Contact = require('../models/Contact');
 
 const router = express.Router();
 
@@ -12,13 +12,15 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Name and phone are required' });
     }
 
-    const [result] = await pool.execute(
-      'INSERT INTO contact_requests (name, phone, email, message) VALUES (?, ?, ?, ?)',
-      [name, phone, email || null, message || null]
-    );
+    const id = await Contact.createRequest({
+      name,
+      phone,
+      email,
+      message
+    });
 
     res.status(201).json({ 
-      id: result.insertId, 
+      id, 
       message: 'Contact request submitted successfully' 
     });
   } catch (error) {
