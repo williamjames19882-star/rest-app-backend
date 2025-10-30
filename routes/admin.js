@@ -1,7 +1,8 @@
 const express = require('express');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 const Admin = require('../models/Admin');
-const { upload, uploadToCloudinary } = require('../utils/uploadHelper');
+const { upload, uploadToCloudinary, deleteFromCloudinary } = require('../utils/uploadHelper');
+const Banner = require('../models/Banner');
 
 const router = express.Router();
 
@@ -151,6 +152,22 @@ router.put('/reservations/:id/status', async (req, res) => {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
+    // When confirming, ensure availability at that date/time
+    if (status === 'confirmed') {
+      const reservation = await require('../models/Reservation').getById(id);
+      if (!reservation) {
+        return res.status(404).json({ error: 'Reservation not found' });
+      }
+      const conflict = await require('../models/Reservation').isTableAlreadyBooked(
+        reservation.table_id,
+        reservation.date,
+        reservation.time
+      );
+      if (conflict) {
+        return res.status(409).json({ error: 'This table is already booked at the selected date and time' });
+      }
+    }
+
     const affectedRows = await Admin.updateReservationStatus(id, status);
 
     if (affectedRows === 0) {
@@ -298,6 +315,102 @@ router.put('/contact-requests/:id/status', async (req, res) => {
     res.json({ message: 'Contact request status updated successfully' });
   } catch (error) {
     console.error('Update contact request status error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Banners management
+// Get all banners (including inactive)
+router.get('/banners', async (req, res) => {
+  try {
+    const banners = await Banner.getAll();
+    res.json(banners);
+  } catch (error) {
+    console.error('Get all banners error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create banner (with image upload)
+router.post('/banners', upload.single('image'), async (req, res) => {
+  try {
+    const { title, subtitle, is_active, position } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'Image is required' });
+    }
+
+    const result = await uploadToCloudinary(req.file, 'banners');
+
+    const banner = await Banner.create({
+      title,
+      subtitle,
+      image_url: result.secure_url,
+      public_id: result.public_id,
+      is_active: is_active === '0' ? 0 : 1,
+      position: position ? parseInt(position, 10) : 0
+    });
+
+    res.status(201).json({ banner, message: 'Banner created successfully' });
+  } catch (error) {
+    console.error('Create banner error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update banner (optionally replace image)
+router.put('/banners/:id', upload.single('image'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, subtitle, is_active, position } = req.body;
+
+    const existing = await Banner.getById(id);
+    if (!existing) return res.status(404).json({ error: 'Banner not found' });
+
+    let image_url = existing.image_url;
+    let public_id = existing.public_id;
+
+    if (req.file) {
+      // Optionally delete old image
+      if (public_id) {
+        try { await deleteFromCloudinary(public_id); } catch (e) { /* ignore */ }
+      }
+      const uploadRes = await uploadToCloudinary(req.file, 'banners');
+      image_url = uploadRes.secure_url;
+      public_id = uploadRes.public_id;
+    }
+
+    const updated = await Banner.update(id, {
+      title,
+      subtitle,
+      image_url,
+      public_id,
+      is_active: is_active === '0' ? 0 : 1,
+      position: position ? parseInt(position, 10) : 0
+    });
+
+    res.json({ banner: updated, message: 'Banner updated successfully' });
+  } catch (error) {
+    console.error('Update banner error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete banner
+router.delete('/banners/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const existing = await Banner.getById(id);
+    if (!existing) return res.status(404).json({ error: 'Banner not found' });
+
+    if (existing.public_id) {
+      try { await deleteFromCloudinary(existing.public_id); } catch (e) { /* ignore */ }
+    }
+
+    await Banner.delete(id);
+    res.json({ message: 'Banner deleted successfully' });
+  } catch (error) {
+    console.error('Delete banner error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

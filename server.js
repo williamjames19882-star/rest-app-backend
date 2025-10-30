@@ -22,6 +22,7 @@ app.use('/api/menu', require('./routes/menu'));
 app.use('/api/reservations', require('./routes/reservations'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/contact', require('./routes/contact'));
+app.use('/api/banners', require('./routes/banners'));
 app.use('/api/admin', require('./routes/admin'));
 
 // Health check route

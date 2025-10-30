@@ -43,6 +43,12 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Number of guests exceeds table capacity' });
     }
 
+    // Prevent double booking: verify table is not already confirmed at the same date/time
+    const conflict = await Reservation.isTableAlreadyBooked(table_id, date, time);
+    if (conflict) {
+      return res.status(409).json({ error: 'This table is already booked for the selected date and time' });
+    }
+
     const reservationId = await Reservation.create({
       user_id,
       table_id,

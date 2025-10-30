@@ -87,3 +87,15 @@ INSERT INTO menu_items (name, description, price, category, image_url) VALUES
 ('Tiramisu', 'Classic Italian dessert', 7.99, 'Desserts', '/images/tiramisu1.jpg'),
 ('Chicken Wings', 'Buffalo wings with blue cheese dip', 9.99, 'Appetizers', '/images/wings1.jpg');
 
+-- Banners table for homepage carousel
+CREATE TABLE IF NOT EXISTS banners (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(150),
+  subtitle VARCHAR(255),
+  image_url VARCHAR(255) NOT NULL,
+  public_id VARCHAR(255),
+  is_active TINYINT(1) DEFAULT 1,
+  position INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+

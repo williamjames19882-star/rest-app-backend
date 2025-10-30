@@ -41,12 +41,30 @@ class ReservationRepository {
     return rows;
   }
 
+  static async existsConfirmedForTableAt(tableId, date, time) {
+    const [rows] = await pool.execute(
+      `SELECT id FROM reservations 
+       WHERE table_id = ? AND date = ? AND time = ? AND status = 'confirmed' 
+       LIMIT 1`,
+      [tableId, date, time]
+    );
+    return rows.length > 0;
+  }
+
   static async updateStatus(id, status) {
     const [result] = await pool.execute(
       'UPDATE reservations SET status = ? WHERE id = ?',
       [status, id]
     );
     return result.affectedRows;
+  }
+
+  static async findById(id) {
+    const [rows] = await pool.execute(
+      'SELECT * FROM reservations WHERE id = ? LIMIT 1',
+      [id]
+    );
+    return rows[0];
   }
 
   static async countByTableId(tableId) {
