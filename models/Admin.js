@@ -7,11 +7,11 @@ const StatsRepository = require('../repositories/StatsRepository');
 
 class Admin {
   // User management
-  static async getAllUsers(search) {
+  static async getAllUsers(search, page = 1, pageSize = 25) {
     if (search) {
-      return await UserRepository.search(search);
+      return await UserRepository.searchWithPagination(search, page, pageSize);
     }
-    return await UserRepository.findAll();
+    return await UserRepository.getAll(page, pageSize);
   }
 
   // Menu management
@@ -42,8 +42,8 @@ class Admin {
   }
 
   // Reservation management
-  static async getAllReservations() {
-    return await ReservationRepository.getAll();
+  static async getAllReservations(page = 1, pageSize = 25) {
+    return await ReservationRepository.getAll(page, pageSize);
   }
 
   static async updateReservationStatus(id, status) {
@@ -77,8 +77,8 @@ class Admin {
   }
 
   // Contact request management
-  static async getAllContactRequests() {
-    return await ContactRequestRepository.getAll();
+  static async getAllContactRequests(page = 1, pageSize = 25) {
+    return await ContactRequestRepository.getAll(page, pageSize);
   }
 
   static async updateContactRequestStatus(id, status) {

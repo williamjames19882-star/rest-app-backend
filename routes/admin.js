@@ -9,12 +9,14 @@ const router = express.Router();
 // All admin routes require authentication and admin role
 router.use(authenticateToken, requireAdmin);
 
-// Get all users with optional search
+// Get all users with optional search and pagination
 router.get('/users', async (req, res) => {
   try {
-    const { search } = req.query;
-    const users = await Admin.getAllUsers(search);
-    res.json(users);
+    const { search, page, pageSize } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const pageSizeNum = parseInt(pageSize) || 25;
+    const result = await Admin.getAllUsers(search, pageNum, pageSizeNum);
+    res.json(result);
   } catch (error) {
     console.error('Get all users error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -24,7 +26,10 @@ router.get('/users', async (req, res) => {
 // Get all reservations (admin only)
 router.get('/reservations', async (req, res) => {
   try {
-    const reservations = await Admin.getAllReservations();
+    const { page, pageSize } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const pageSizeNum = parseInt(pageSize) || 25;
+    const reservations = await Admin.getAllReservations(pageNum, pageSizeNum);
     res.json(reservations);
   } catch (error) {
     console.error('Get all reservations error:', error);
@@ -288,7 +293,10 @@ router.delete('/tables/:id', async (req, res) => {
 // Get all contact requests
 router.get('/contact-requests', async (req, res) => {
   try {
-    const requests = await Admin.getAllContactRequests();
+    const { page, pageSize } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const pageSizeNum = parseInt(pageSize) || 25;
+    const requests = await Admin.getAllContactRequests(pageNum, pageSizeNum);
     res.json(requests);
   } catch (error) {
     console.error('Get all contact requests error:', error);
@@ -411,6 +419,36 @@ router.delete('/banners/:id', async (req, res) => {
     res.json({ message: 'Banner deleted successfully' });
   } catch (error) {
     console.error('Delete banner error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Transactions management
+const Transaction = require('../models/Transaction');
+
+// Get all transactions or search by username, order_number, or transaction_id
+router.get('/transactions', async (req, res) => {
+  try {
+    const { username, order_number, transaction_id, page, pageSize } = req.query;
+    const pageNum = parseInt(page) || 1;
+    const pageSizeNum = parseInt(pageSize) || 25;
+    
+    let transactions;
+    if (username || order_number || transaction_id) {
+      transactions = await Transaction.search({ 
+        username, 
+        order_number, 
+        transaction_id, 
+        page: pageNum, 
+        pageSize: pageSizeNum 
+      });
+    } else {
+      transactions = await Transaction.getAll(pageNum, pageSizeNum);
+    }
+    
+    res.json(transactions);
+  } catch (error) {
+    console.error('Get transactions error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

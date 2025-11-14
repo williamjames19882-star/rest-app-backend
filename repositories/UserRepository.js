@@ -40,6 +40,34 @@ class UserRepository {
     return rows;
   }
 
+  static async getAll(page = 1, pageSize = 25) {
+    const pageNum = parseInt(page) || 1;
+    const pageSizeNum = parseInt(pageSize) || 25;
+    const offset = (pageNum - 1) * pageSizeNum;
+
+    // Get total count
+    const [countResult] = await pool.execute('SELECT COUNT(*) as total FROM users');
+    const total = countResult[0].total;
+
+    // Get paginated data
+    const [rows] = await pool.execute(
+      `SELECT id, name, email, phone, role, created_at 
+       FROM users 
+       ORDER BY created_at DESC 
+       LIMIT ${pageSizeNum} OFFSET ${offset}`
+    );
+
+    return {
+      data: rows,
+      pagination: {
+        page: pageNum,
+        pageSize: pageSizeNum,
+        total: total,
+        totalPages: Math.ceil(total / pageSizeNum)
+      }
+    };
+  }
+
   static async search(searchTerm) {
     const [rows] = await pool.execute(
       `SELECT id, name, email, phone, role, created_at 
@@ -50,6 +78,41 @@ class UserRepository {
     );
     
     return rows;
+  }
+
+  static async searchWithPagination(searchTerm, page = 1, pageSize = 25) {
+    const pageNum = parseInt(page) || 1;
+    const pageSizeNum = parseInt(pageSize) || 25;
+    const offset = (pageNum - 1) * pageSizeNum;
+
+    // Get total count
+    const [countResult] = await pool.execute(
+      `SELECT COUNT(*) as total 
+       FROM users 
+       WHERE name LIKE ? OR email LIKE ?`,
+      [`%${searchTerm}%`, `%${searchTerm}%`]
+    );
+    const total = countResult[0].total;
+
+    // Get paginated data
+    const [rows] = await pool.execute(
+      `SELECT id, name, email, phone, role, created_at 
+       FROM users 
+       WHERE name LIKE ? OR email LIKE ? 
+       ORDER BY created_at DESC 
+       LIMIT ${pageSizeNum} OFFSET ${offset}`,
+      [`%${searchTerm}%`, `%${searchTerm}%`]
+    );
+
+    return {
+      data: rows,
+      pagination: {
+        page: pageNum,
+        pageSize: pageSizeNum,
+        total: total,
+        totalPages: Math.ceil(total / pageSizeNum)
+      }
+    };
   }
 
   static async count() {

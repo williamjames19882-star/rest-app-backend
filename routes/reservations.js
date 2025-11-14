@@ -5,8 +5,8 @@ const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Get available tables for a specific date and time
-router.get('/tables/available', authenticateToken, async (req, res) => {
+// Get available tables for a specific date and time (no auth required)
+router.get('/tables/available', async (req, res) => {
   try {
     const { date, time } = req.query;
 
@@ -22,14 +22,15 @@ router.get('/tables/available', authenticateToken, async (req, res) => {
   }
 });
 
-// Create reservation
-router.post('/', authenticateToken, async (req, res) => {
+// Create reservation (no auth required, uses mobile number)
+router.post('/', async (req, res) => {
   try {
-    const { table_id, date, time, number_of_guests, special_requests } = req.body;
-    const user_id = req.user.userId;
+    const { table_id, date, time, number_of_guests, special_requests, mobile_number, email } = req.body;
+    // user_id is optional - can be null for guest reservations
+    const user_id = null;
 
-    if (!table_id || !date || !time || !number_of_guests) {
-      return res.status(400).json({ error: 'Table, date, time, and number of guests are required' });
+    if (!table_id || !date || !time || !number_of_guests || !mobile_number) {
+      return res.status(400).json({ error: 'Table, date, time, number of guests, and mobile number are required' });
     }
 
     // Check if table exists and get capacity
@@ -51,6 +52,8 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const reservationId = await Reservation.create({
       user_id,
+      mobile_number,
+      email: email || null,
       table_id,
       date,
       time,
@@ -65,7 +68,7 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
-// Get user's reservations
+// Get user's reservations (requires authentication)
 router.get('/my-reservations', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;

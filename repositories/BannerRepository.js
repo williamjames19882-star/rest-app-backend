@@ -46,4 +46,3 @@ class BannerRepository {
 
 module.exports = BannerRepository;
 
-

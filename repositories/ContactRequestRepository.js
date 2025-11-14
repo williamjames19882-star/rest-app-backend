@@ -10,11 +10,33 @@ class ContactRequestRepository {
     return result.insertId;
   }
 
-  static async getAll() {
-    const [rows] = await pool.execute(
-      'SELECT * FROM contact_requests ORDER BY created_at DESC'
+  static async getAll(page = 1, pageSize = 25) {
+    const pageNum = parseInt(page) || 1;
+    const pageSizeNum = parseInt(pageSize) || 25;
+    const offset = (pageNum - 1) * pageSizeNum;
+    
+    // Get total count
+    const [countResult] = await pool.execute(
+      'SELECT COUNT(*) as total FROM contact_requests'
     );
-    return rows;
+    const total = countResult[0].total;
+    
+    // Get paginated results
+    // Note: LIMIT and OFFSET cannot use placeholders in mysql2, so we use string interpolation
+    // Values are already sanitized as integers
+    const [rows] = await pool.execute(
+      `SELECT * FROM contact_requests ORDER BY created_at DESC LIMIT ${pageSizeNum} OFFSET ${offset}`
+    );
+    
+    return {
+      data: rows,
+      pagination: {
+        page: pageNum,
+        pageSize: pageSizeNum,
+        total,
+        totalPages: Math.ceil(total / pageSizeNum)
+      }
+    };
   }
 
   static async updateStatus(id, status) {
