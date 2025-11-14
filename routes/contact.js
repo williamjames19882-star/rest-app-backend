@@ -1,33 +1,28 @@
 const express = require('express');
-const Contact = require('../models/Contact');
-
 const router = express.Router();
+const contactController = require('../controllers/contactController');
+const { authenticateToken } = require('../middleware/auth');
 
-// Create contact request
-router.post('/', async (req, res) => {
-  try {
-    const { name, phone, email, message } = req.body;
+// Public routes (no authentication required)
+router.post('/submit', contactController.submitContactMessage);
+router.get('/faq', contactController.getFAQ);
 
-    if (!name || !phone) {
-      return res.status(400).json({ error: 'Name and phone are required' });
-    }
+// Protected routes (authentication required)
+router.use(authenticateToken);
 
-    const id = await Contact.createRequest({
-      name,
-      phone,
-      email,
-      message
-    });
+// Get contact messages by email
+router.get('/messages/:email', contactController.getContactMessages);
 
-    res.status(201).json({ 
-      id, 
-      message: 'Contact request submitted successfully' 
-    });
-  } catch (error) {
-    console.error('Create contact request error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+// Get contact message by ID
+router.get('/messages/:id', contactController.getContactMessageById);
+
+// Update contact message status
+router.put('/messages/:id/status', contactController.updateContactMessageStatus);
+
+// Admin routes (get all messages)
+router.get('/admin/messages', contactController.getAllContactMessages);
+
+// Admin routes (get statistics)
+router.get('/admin/stats', contactController.getContactMessageStats);
 
 module.exports = router;
-

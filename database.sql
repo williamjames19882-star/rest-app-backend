@@ -1,101 +1,88 @@
 -- Create database
-CREATE DATABASE IF NOT EXISTS restaurant_db;
-USE restaurant_db;
+CREATE DATABASE IF NOT EXISTS naniccp_system;
+USE naniccp_system;
 
--- Users table
+-- Create users table
 CREATE TABLE IF NOT EXISTS users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  email VARCHAR(100) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  phone VARCHAR(20) NOT NULL,
-  role VARCHAR(20) DEFAULT 'user',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Tables table
-CREATE TABLE IF NOT EXISTS tables (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  table_number VARCHAR(10) NOT NULL UNIQUE,
-  capacity INT NOT NULL,
-  location VARCHAR(50),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Create transactions table
+CREATE TABLE IF NOT EXISTS transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+    payment_method VARCHAR(50) NOT NULL,
+    status ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending',
+    reference VARCHAR(50) NOT NULL UNIQUE,
+    card_number_last4 VARCHAR(4),
+    cardholder_name VARCHAR(100),
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Menu items table
-CREATE TABLE IF NOT EXISTS menu_items (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  description TEXT,
-  price DECIMAL(10, 2) NOT NULL,
-  category VARCHAR(50) NOT NULL,
-  image_url VARCHAR(255),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Create qr_codes table
+CREATE TABLE IF NOT EXISTS qr_codes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    currency VARCHAR(3) NOT NULL DEFAULT 'USD',
+    description TEXT,
+    qr_data TEXT NOT NULL,
+    is_used BOOLEAN DEFAULT FALSE,
+    expires_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Reservations table
-CREATE TABLE IF NOT EXISTS reservations (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  table_id INT NOT NULL,
-  date DATE NOT NULL,
-  time TIME NOT NULL,
-  number_of_guests INT NOT NULL,
-  special_requests TEXT,
-  status VARCHAR(20) DEFAULT 'confirmed',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE CASCADE
+-- Create support_tickets table
+CREATE TABLE IF NOT EXISTS support_tickets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
+    status ENUM('open', 'in-progress', 'resolved', 'closed') DEFAULT 'open',
+    category VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Contact Requests table
-CREATE TABLE IF NOT EXISTS contact_requests (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  email VARCHAR(100),
-  phone VARCHAR(20) NOT NULL,
-  message TEXT,
-  status VARCHAR(20) DEFAULT 'new',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Create contact_messages table
+CREATE TABLE IF NOT EXISTS contact_messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100) NOT NULL,
+    phone VARCHAR(20),
+    subject VARCHAR(255),
+    message TEXT NOT NULL,
+    inquiry_type VARCHAR(50) DEFAULT 'general',
+    status ENUM('new', 'in-progress', 'resolved') DEFAULT 'new',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert sample tables
-INSERT INTO tables (table_number, capacity, location) VALUES
-('T01', 2, 'Window'),
-('T02', 2, 'Window'),
-('T03', 4, 'Main Hall'),
-('T04', 4, 'Main Hall'),
-('T05', 4, 'Main Hall'),
-('T06', 6, 'Main Hall'),
-('T07', 6, 'Main Hall'),
-('T08', 8, 'Private Room'),
-('T09', 8, 'Private Room'),
-('T10', 10, 'Private Room');
+-- Create indexes for better performance
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_transactions_user_id ON transactions(user_id);
+CREATE INDEX idx_transactions_status ON transactions(status);
+CREATE INDEX idx_transactions_reference ON transactions(reference);
+CREATE INDEX idx_qr_codes_user_id ON qr_codes(user_id);
+CREATE INDEX idx_qr_codes_expires_at ON qr_codes(expires_at);
+CREATE INDEX idx_support_tickets_user_id ON support_tickets(user_id);
+CREATE INDEX idx_support_tickets_status ON support_tickets(status);
+CREATE INDEX idx_contact_messages_status ON contact_messages(status);
 
--- Insert sample menu items
-INSERT INTO menu_items (name, description, price, category, image_url) VALUES
-('Margherita Pizza', 'Fresh mozzarella, tomato sauce, basil', 12.99, 'Pizza', '/images/pizza1.jpg'),
-('Pepperoni Pizza', 'Mozzarella, pepperoni, tomato sauce', 14.99, 'Pizza', '/images/pizza2.jpg'),
-('Caesar Salad', 'Romaine lettuce, parmesan, croutons, caesar dressing', 8.99, 'Salads', '/images/salad1.jpg'),
-('Greek Salad', 'Feta cheese, olives, tomatoes, cucumbers', 9.99, 'Salads', '/images/salad2.jpg'),
-('Spaghetti Carbonara', 'Bacon, parmesan, black pepper', 15.99, 'Pasta', '/images/pasta1.jpg'),
-('Fettuccine Alfredo', 'Cream sauce, parmesan', 14.99, 'Pasta', '/images/pasta2.jpg'),
-('Grilled Salmon', 'Fresh salmon with lemon butter sauce', 22.99, 'Main Courses', '/images/salmon1.jpg'),
-('Ribeye Steak', 'Prime ribeye with roasted vegetables', 28.99, 'Main Courses', '/images/steak1.jpg'),
-('Cheeseburger', 'Beef patty, cheese, lettuce, tomato', 11.99, 'Burgers', '/images/burger1.jpg'),
-('Chocolate Cake', 'Rich chocolate cake with frosting', 6.99, 'Desserts', '/images/cake1.jpg'),
-('Tiramisu', 'Classic Italian dessert', 7.99, 'Desserts', '/images/tiramisu1.jpg'),
-('Chicken Wings', 'Buffalo wings with blue cheese dip', 9.99, 'Appetizers', '/images/wings1.jpg');
-
--- Banners table for homepage carousel
-CREATE TABLE IF NOT EXISTS banners (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  title VARCHAR(150),
-  subtitle VARCHAR(255),
-  image_url VARCHAR(255) NOT NULL,
-  public_id VARCHAR(255),
-  is_active TINYINT(1) DEFAULT 1,
-  position INT DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
+-- Insert a sample user (password is 'Abcd12345' hashed)
+INSERT INTO users (username, email, password) VALUES 
+('admin', 'admin@ccp.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi')
+ON DUPLICATE KEY UPDATE username=username;

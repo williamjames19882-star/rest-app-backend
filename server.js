@@ -2,41 +2,80 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
+const { testConnection } = require('./config/database');
+const authRoutes = require('./routes/auth');
+const paymentRoutes = require('./routes/payment');
+const qrRoutes = require('./routes/qr');
+const supportRoutes = require('./routes/support');
+const contactRoutes = require('./routes/contact');
+
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
-// Configure CORS - allow all origins in development, specific origins in production
-app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/menu', require('./routes/menu'));
-app.use('/api/reservations', require('./routes/reservations'));
-app.use('/api/upload', require('./routes/upload'));
-app.use('/api/contact', require('./routes/contact'));
-app.use('/api/banners', require('./routes/banners'));
-app.use('/api/admin', require('./routes/admin'));
+// Test database connection on startup
+testConnection();
 
-// Health check route
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/payment', paymentRoutes);
+app.use('/api/qr', qrRoutes);
+app.use('/api/support', supportRoutes);
+app.use('/api/contact', contactRoutes);
+
+// Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Restaurant API is running' });
+  res.json({
+    success: true,
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found'
+  });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong!' });
+  console.error('Error:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Internal server error'
+  });
 });
 
+// Start server
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🔐 Auth endpoints:`);
+  console.log(`   POST http://localhost:${PORT}/api/auth/register`);
+  console.log(`   POST http://localhost:${PORT}/api/auth/login`);
+  console.log(`   GET  http://localhost:${PORT}/api/auth/profile`);
+  console.log(`   POST http://localhost:${PORT}/api/auth/logout`);
+  console.log(`💳 Payment endpoints:`);
+  console.log(`   POST http://localhost:${PORT}/api/payment/process`);
+  console.log(`   GET  http://localhost:${PORT}/api/payment/transactions`);
+  console.log(`   GET  http://localhost:${PORT}/api/payment/stats`);
+  console.log(`📱 QR Code endpoints:`);
+  console.log(`   POST http://localhost:${PORT}/api/qr/generate`);
+  console.log(`   GET  http://localhost:${PORT}/api/qr/codes`);
+  console.log(`   POST http://localhost:${PORT}/api/qr/process`);
+  console.log(`🎫 Support endpoints:`);
+  console.log(`   POST http://localhost:${PORT}/api/support/tickets`);
+  console.log(`   GET  http://localhost:${PORT}/api/support/tickets`);
+  console.log(`📞 Contact endpoints:`);
+  console.log(`   POST http://localhost:${PORT}/api/contact/submit`);
+  console.log(`   GET  http://localhost:${PORT}/api/contact/faq`);
 });
 
+module.exports = app;
