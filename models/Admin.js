@@ -1,7 +1,6 @@
 const UserRepository = require('../repositories/UserRepository');
 const MenuRepository = require('../repositories/MenuRepository');
 const ReservationRepository = require('../repositories/ReservationRepository');
-const TableRepository = require('../repositories/TableRepository');
 const ContactRequestRepository = require('../repositories/ContactRequestRepository');
 const StatsRepository = require('../repositories/StatsRepository');
 
@@ -50,31 +49,6 @@ class Admin {
     return await ReservationRepository.updateStatus(id, status);
   }
 
-  // Table management
-  static async getAllTables() {
-    return await TableRepository.getAll();
-  }
-
-  static async createTable(tableData) {
-    const tableId = await TableRepository.create(tableData);
-    return await TableRepository.getById(tableId);
-  }
-
-  static async updateTable(id, tableData) {
-    const affectedRows = await TableRepository.update(id, tableData);
-    if (affectedRows === 0) {
-      return null;
-    }
-    return await TableRepository.getById(id);
-  }
-
-  static async deleteTable(id) {
-    return await TableRepository.delete(id);
-  }
-
-  static async getTableById(id) {
-    return await TableRepository.getById(id);
-  }
 
   // Contact request management
   static async getAllContactRequests(page = 1, pageSize = 25) {
@@ -90,11 +64,6 @@ class Admin {
     return await StatsRepository.getDashboardStats();
   }
 
-  // Helper methods
-  static async checkTableHasReservations(tableId) {
-    const count = await ReservationRepository.countByTableId(tableId);
-    return count > 0;
-  }
 }
 
 module.exports = Admin;

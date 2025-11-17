@@ -9,13 +9,6 @@ class Reservation {
     return await ReservationRepository.getByUserId(userId);
   }
 
-  static async getAvailableTables(date, time) {
-    return await ReservationRepository.getAvailableTables(date, time);
-  }
-
-  static async isTableAlreadyBooked(tableId, date, time) {
-    return await ReservationRepository.existsConfirmedForTableAt(tableId, date, time);
-  }
 
   static async getById(id) {
     return await ReservationRepository.findById(id);

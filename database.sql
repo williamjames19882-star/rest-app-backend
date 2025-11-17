@@ -13,15 +13,6 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tables table
-CREATE TABLE IF NOT EXISTS tables (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  table_number VARCHAR(10) NOT NULL UNIQUE,
-  capacity INT NOT NULL,
-  location VARCHAR(50),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Menu items table
 CREATE TABLE IF NOT EXISTS menu_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -39,15 +30,14 @@ CREATE TABLE IF NOT EXISTS reservations (
   user_id INT NULL,
   mobile_number VARCHAR(20) NOT NULL,
   email VARCHAR(100),
-  table_id INT NOT NULL,
+  table_id INT NULL,
   date DATE NOT NULL,
   time TIME NOT NULL,
   number_of_guests INT NOT NULL,
   special_requests TEXT,
   status VARCHAR(20) DEFAULT 'pending',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE CASCADE
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Contact Requests table
@@ -60,19 +50,6 @@ CREATE TABLE IF NOT EXISTS contact_requests (
   status VARCHAR(20) DEFAULT 'new',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- Insert sample tables
-INSERT INTO tables (table_number, capacity, location) VALUES
-('T01', 2, 'Window'),
-('T02', 2, 'Window'),
-('T03', 4, 'Main Hall'),
-('T04', 4, 'Main Hall'),
-('T05', 4, 'Main Hall'),
-('T06', 6, 'Main Hall'),
-('T07', 6, 'Main Hall'),
-('T08', 8, 'Private Room'),
-('T09', 8, 'Private Room'),
-('T10', 10, 'Private Room');
 
 -- Insert sample menu items
 INSERT INTO menu_items (name, description, price, category, image_url) VALUES

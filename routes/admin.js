@@ -157,21 +157,6 @@ router.put('/reservations/:id/status', async (req, res) => {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
-    // When confirming, ensure availability at that date/time
-    if (status === 'confirmed') {
-      const reservation = await require('../models/Reservation').getById(id);
-      if (!reservation) {
-        return res.status(404).json({ error: 'Reservation not found' });
-      }
-      const conflict = await require('../models/Reservation').isTableAlreadyBooked(
-        reservation.table_id,
-        reservation.date,
-        reservation.time
-      );
-      if (conflict) {
-        return res.status(409).json({ error: 'This table is already booked at the selected date and time' });
-      }
-    }
 
     const affectedRows = await Admin.updateReservationStatus(id, status);
 
@@ -193,99 +178,6 @@ router.get('/stats', async (req, res) => {
     res.json(stats);
   } catch (error) {
     console.error('Get stats error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Get all tables
-router.get('/tables', async (req, res) => {
-  try {
-    const tables = await Admin.getAllTables();
-    res.json(tables);
-  } catch (error) {
-    console.error('Get all tables error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Create new table
-router.post('/tables', async (req, res) => {
-  try {
-    const { table_number, capacity, location } = req.body;
-
-    if (!table_number || !capacity) {
-      return res.status(400).json({ error: 'Table number and capacity are required' });
-    }
-
-    const table = await Admin.createTable({
-      table_number,
-      capacity,
-      location
-    });
-
-    res.status(201).json({ table, message: 'Table created successfully' });
-  } catch (error) {
-    console.error('Create table error:', error);
-    if (error.code === 'ER_DUP_ENTRY') {
-      res.status(400).json({ error: 'Table number already exists' });
-    } else {
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-});
-
-// Update table
-router.put('/tables/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { table_number, capacity, location } = req.body;
-
-    if (!table_number || !capacity) {
-      return res.status(400).json({ error: 'Table number and capacity are required' });
-    }
-
-    const table = await Admin.updateTable(id, {
-      table_number,
-      capacity,
-      location
-    });
-
-    if (!table) {
-      return res.status(404).json({ error: 'Table not found' });
-    }
-
-    res.json({ table, message: 'Table updated successfully' });
-  } catch (error) {
-    console.error('Update table error:', error);
-    if (error.code === 'ER_DUP_ENTRY') {
-      res.status(400).json({ error: 'Table number already exists' });
-    } else {
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-});
-
-// Delete table
-router.delete('/tables/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Check if table has reservations
-    const hasReservations = await Admin.checkTableHasReservations(id);
-
-    if (hasReservations) {
-      return res.status(400).json({ error: 'Cannot delete table with existing reservations' });
-    }
-
-    const affectedRows = await Admin.deleteTable(id);
-
-    if (affectedRows === 0) {
-      return res.status(404).json({ error: 'Table not found' });
-    }
-
-    res.json({ message: 'Table deleted successfully' });
-  } catch (error) {
-    console.error('Delete table error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
