@@ -1,17 +1,17 @@
 const express = require('express');
 const Reservation = require('../models/Reservation');
 const Admin = require('../models/Admin');
-const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const { authenticateToken, optionalAuthenticateToken, requireAdmin } = require('../middleware/auth');
 const { isWithinOpeningHours, getOpeningHoursMessage } = require('../utils/openingHours');
 
 const router = express.Router();
 
-// Create reservation (no auth required, uses mobile number)
-router.post('/', async (req, res) => {
+// Create reservation (auth optional - if authenticated, use user_id)
+router.post('/', optionalAuthenticateToken, async (req, res) => {
   try {
     const { date, time, number_of_guests, special_requests, mobile_number, email } = req.body;
-    // user_id is optional - can be null for guest reservations
-    const user_id = null;
+    // user_id is optional - use authenticated user's ID if available, otherwise null for guest reservations
+    const user_id = req.user ? req.user.userId : null;
 
     if (!date || !time || !number_of_guests || !mobile_number) {
       return res.status(400).json({ error: 'Date, time, number of guests, and mobile number are required' });

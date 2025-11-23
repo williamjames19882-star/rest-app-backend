@@ -19,6 +19,29 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// Optional authentication - doesn't fail if no token, but populates req.user if token is valid
+const optionalAuthenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    // No token provided, continue without authentication
+    req.user = null;
+    return next();
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'your_super_secret_jwt_key_change_this_in_production', (err, user) => {
+    if (err) {
+      // Invalid token, continue without authentication
+      req.user = null;
+      return next();
+    }
+    
+    req.user = user;
+    next();
+  });
+};
+
 // Admin authentication - only admin users
 const requireAdmin = (req, res, next) => {
   if (!req.user) {
@@ -32,5 +55,5 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { authenticateToken, requireAdmin };
+module.exports = { authenticateToken, optionalAuthenticateToken, requireAdmin };
 

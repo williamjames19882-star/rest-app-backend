@@ -2,7 +2,7 @@ const pool = require('../config/db');
 
 class Transaction {
   static async create(transactionData) {
-    const { user_id, order_number, items, total_amount, payment_method, status = 'completed' } = transactionData;
+    const { user_id, order_number, items, total_amount, payment_method, notes, order_type = 'collection', address_id, status = 'completed', order_status = 'order_accepted' } = transactionData;
     
     // Ensure items is properly stringified
     let itemsJson;
@@ -19,8 +19,8 @@ class Transaction {
     }
     
     const [result] = await pool.execute(
-      'INSERT INTO transactions (user_id, order_number, items, total_amount, payment_method, status) VALUES (?, ?, ?, ?, ?, ?)',
-      [user_id, order_number, itemsJson, total_amount, payment_method, status]
+      'INSERT INTO transactions (user_id, order_number, items, total_amount, payment_method, notes, order_type, address_id, status, order_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [user_id, order_number, itemsJson, total_amount, payment_method, notes || null, order_type, address_id || null, status, order_status]
     );
     return result.insertId;
   }
@@ -185,6 +185,34 @@ class Transaction {
         totalPages: Math.ceil(total / pageSizeNum)
       }
     };
+  }
+
+  static async updateStatus(id, status) {
+    const validStatuses = ['pending', 'processing', 'completed', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      throw new Error('Invalid status');
+    }
+    
+    const [result] = await pool.execute(
+      'UPDATE transactions SET status = ? WHERE id = ?',
+      [status, id]
+    );
+    
+    return result.affectedRows;
+  }
+
+  static async updateOrderStatus(id, orderStatus) {
+    const validOrderStatuses = ['order_accepted', 'order_preparing', 'order_ready', 'order_delivered'];
+    if (!validOrderStatuses.includes(orderStatus)) {
+      throw new Error('Invalid order status');
+    }
+    
+    const [result] = await pool.execute(
+      'UPDATE transactions SET order_status = ? WHERE id = ?',
+      [orderStatus, id]
+    );
+    
+    return result.affectedRows;
   }
 
   static generateOrderNumber() {

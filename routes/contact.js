@@ -6,17 +6,27 @@ const router = express.Router();
 // Create contact request
 router.post('/', async (req, res) => {
   try {
-    const { name, phone, email, message } = req.body;
+    const { name, phone, email, subject, message } = req.body;
 
     if (!name || !phone) {
       return res.status(400).json({ error: 'Name and phone are required' });
+    }
+
+    // Combine subject and message if both are provided
+    let combinedMessage = '';
+    if (subject && message) {
+      combinedMessage = `Subject: ${subject}\n\n${message}`;
+    } else if (subject) {
+      combinedMessage = subject;
+    } else if (message) {
+      combinedMessage = message;
     }
 
     const id = await Contact.createRequest({
       name,
       phone,
       email,
-      message
+      message: combinedMessage
     });
 
     res.status(201).json({ 

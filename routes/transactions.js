@@ -6,7 +6,7 @@ const { authenticateToken } = require('../middleware/auth');
 // Create a new transaction (order)
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    const { items, total_amount, payment_method } = req.body;
+    const { items, total_amount, payment_method, notes, order_type, address_id } = req.body;
     const user_id = req.user.userId;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -29,6 +29,9 @@ router.post('/', authenticateToken, async (req, res) => {
       items,
       total_amount,
       payment_method,
+      notes: notes || null,
+      order_type: order_type || 'collection',
+      address_id: address_id || null,
       status: 'completed'
     });
 

@@ -345,5 +345,51 @@ router.get('/transactions', async (req, res) => {
   }
 });
 
+// Update transaction status
+router.put('/transactions/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['pending', 'processing', 'completed', 'cancelled'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const affectedRows = await Transaction.updateStatus(id, status);
+
+    if (affectedRows === 0) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    res.json({ message: 'Transaction status updated successfully' });
+  } catch (error) {
+    console.error('Update transaction status error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update order status
+router.put('/transactions/:id/order-status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { order_status } = req.body;
+
+    if (!['order_accepted', 'order_preparing', 'order_ready', 'order_delivered'].includes(order_status)) {
+      return res.status(400).json({ error: 'Invalid order status' });
+    }
+
+    const affectedRows = await Transaction.updateOrderStatus(id, order_status);
+
+    if (affectedRows === 0) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    res.json({ message: 'Order status updated successfully' });
+  } catch (error) {
+    console.error('Update order status error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
 
