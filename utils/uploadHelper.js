@@ -19,21 +19,31 @@ const upload = multer({
 });
 
 // Upload file to Cloudinary
-const uploadToCloudinary = async (file, folder = 'restaurant') => {
+const uploadToCloudinary = async (file, folder = 'restaurant', applyTransformations = true) => {
   return new Promise((resolve, reject) => {
     if (!file) {
       return reject(new Error('No file provided'));
     }
 
+    // Build upload options
+    const uploadOptions = {
+      folder: folder,
+      resource_type: 'auto',
+    };
+
+    // Apply transformations only if requested (for banners, menu items, etc.)
+    if (applyTransformations) {
+      uploadOptions.transformation = [
+        { width: 1200, height: 800, crop: 'fill', quality: 'auto' }
+      ];
+    } else {
+      // For category images, preserve original size and quality
+      uploadOptions.quality = 'auto';
+    }
+
     // Create upload stream
     const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: folder,
-        resource_type: 'auto',
-        transformation: [
-          { width: 1200, height: 800, crop: 'fill', quality: 'auto' }
-        ]
-      },
+      uploadOptions,
       (error, result) => {
         if (error) {
           console.error('Cloudinary upload error:', error);

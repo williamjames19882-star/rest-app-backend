@@ -23,6 +23,7 @@ app.use('/api/reservations', require('./routes/reservations'));
 app.use('/api/upload', require('./routes/upload'));
 app.use('/api/contact', require('./routes/contact'));
 app.use('/api/banners', require('./routes/banners'));
+app.use('/api/category-images', require('./routes/categoryImages'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/transactions', require('./routes/transactions'));
 app.use('/api/addresses', require('./routes/addresses'));

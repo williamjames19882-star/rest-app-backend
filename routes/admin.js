@@ -3,6 +3,7 @@ const { authenticateToken, requireAdmin } = require('../middleware/auth');
 const Admin = require('../models/Admin');
 const { upload, uploadToCloudinary, deleteFromCloudinary } = require('../utils/uploadHelper');
 const Banner = require('../models/Banner');
+const CategoryImage = require('../models/CategoryImage');
 
 const router = express.Router();
 
@@ -387,6 +388,106 @@ router.put('/transactions/:id/order-status', async (req, res) => {
     res.json({ message: 'Order status updated successfully' });
   } catch (error) {
     console.error('Update order status error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Category Images management
+// Get all category images
+router.get('/category-images', async (req, res) => {
+  try {
+    const images = await CategoryImage.getAll();
+    res.json(images);
+  } catch (error) {
+    console.error('Get all category images error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get category image by category name
+router.get('/category-images/:category', async (req, res) => {
+  try {
+    const { category } = req.params;
+    const image = await CategoryImage.getByCategory(category);
+    if (!image) {
+      return res.status(404).json({ error: 'Category image not found' });
+    }
+    res.json(image);
+  } catch (error) {
+    console.error('Get category image error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Create or update category image (with image upload)
+router.post('/category-images', upload.single('image'), async (req, res) => {
+  try {
+    const { category } = req.body;
+
+    if (!category) {
+      return res.status(400).json({ error: 'Category is required' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'Image is required' });
+    }
+
+    // Check if category image already exists
+    const existing = await CategoryImage.getByCategory(category);
+    
+    // Upload without transformations to preserve entire image
+    const result = await uploadToCloudinary(req.file, 'category-images', false);
+    
+    if (existing) {
+      // Update existing
+      if (existing.public_id) {
+        try {
+          await deleteFromCloudinary(existing.public_id);
+        } catch (e) {
+          // Ignore deletion errors
+        }
+      }
+      const updated = await CategoryImage.update(category, {
+        image_url: result.secure_url,
+        public_id: result.public_id
+      });
+      res.json({ categoryImage: updated, message: 'Category image updated successfully' });
+    } else {
+      // Create new
+      const created = await CategoryImage.create({
+        category,
+        image_url: result.secure_url,
+        public_id: result.public_id
+      });
+      res.status(201).json({ categoryImage: created, message: 'Category image created successfully' });
+    }
+  } catch (error) {
+    console.error('Create/update category image error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete category image
+router.delete('/category-images/:category', async (req, res) => {
+  try {
+    const { category } = req.params;
+    const existing = await CategoryImage.getByCategory(category);
+    if (!existing) {
+      return res.status(404).json({ error: 'Category image not found' });
+    }
+
+    if (existing.public_id) {
+      try {
+        await deleteFromCloudinary(existing.public_id);
+      } catch (e) {
+        // Ignore deletion errors
+      }
+    }
+
+    await CategoryImage.delete(category);
+    res.json({ message: 'Category image deleted successfully' });
+  } catch (error) {
+    console.error('Delete category image error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
