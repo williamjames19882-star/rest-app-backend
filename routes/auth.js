@@ -24,11 +24,10 @@ router.post('/signup', async (req, res) => {
     const newUser = await Auth.signup({ name, email, password, phone });
     const userId = newUser.id;
 
-    // Generate JWT token with role and name
+    // Generate JWT token with role and name (no expiration)
     const token = jwt.sign(
       { userId, email, name: newUser.name, role: newUser.role },
-      process.env.JWT_SECRET || 'your_super_secret_jwt_key_change_this_in_production',
-      { expiresIn: '7d' }
+      process.env.JWT_SECRET || 'your_super_secret_jwt_key_change_this_in_production'
     );
 
     res.status(201).json({ token, userId, role: newUser.role, message: 'User created successfully' });
@@ -57,10 +56,10 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // Generate JWT token (no expiration)
     const token = jwt.sign(
       { userId: user.id, email: user.email, name: user.name, role: user.role || 'user' },
-      process.env.JWT_SECRET || 'your_super_secret_jwt_key_change_this_in_production',
-      { expiresIn: '7d' }
+      process.env.JWT_SECRET || 'your_super_secret_jwt_key_change_this_in_production'
     );
 
     res.json({ token, userId: user.id, role: user.role || 'user', message: 'Login successful' });

@@ -1,7 +1,7 @@
 // Restaurant opening hours utility
-// Monday-Thursday: 5pm-3am
-// Friday: 3pm-3am
-// Saturday-Sunday: 12pm-3am
+// Monday-Thursday: 17:00-03:00
+// Friday: 15:00-03:00
+// Saturday-Sunday: 17:00-03:00
 
 /**
  * Get opening hours for a specific day of the week
@@ -14,23 +14,23 @@ const getOpeningHours = (date) => {
   // Sunday (0) or Saturday (6)
   if (dayOfWeek === 0 || dayOfWeek === 6) {
     return {
-      openTime: '12:00', // 12:00pm
-      closeTime: '03:00' // 3:00am (next day)
+      openTime: '17:00', // 17:00 (5:00pm)
+      closeTime: '03:00' // 03:00 (3:00am next day)
     };
   }
   
   // Friday (5)
   if (dayOfWeek === 5) {
     return {
-      openTime: '15:00', // 3:00pm
-      closeTime: '03:00' // 3:00am (next day)
+      openTime: '15:00', // 15:00 (3:00pm)
+      closeTime: '03:00' // 03:00 (3:00am next day)
     };
   }
   
   // Monday (1) - Thursday (4)
   return {
-    openTime: '17:00', // 5:00pm
-    closeTime: '03:00' // 3:00am (next day)
+    openTime: '17:00', // 17:00 (5:00pm)
+    closeTime: '03:00' // 03:00 (3:00am next day)
   };
 };
 
