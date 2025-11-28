@@ -7,12 +7,33 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 // Configure CORS - allow all origins in development, specific origins in production
+const allowedOrigins = [
+  process.env.VERCEL_FRONTEND_URL,        // https://yourdomain.com
+  process.env.MY_FRONTEND_URL,         // if you have admin
+  process.env.MY_FRONTEND_URL_WWW           // if you have admin
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin: function (origin, callback) {
+    // Allow server-to-server calls & postman (origin = undefined)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Blocked by CORS: ' + origin));
+    }
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Signature',
+    'X-Requested-With'
+  ]
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
